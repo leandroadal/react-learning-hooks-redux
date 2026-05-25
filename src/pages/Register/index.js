@@ -1,96 +1,114 @@
-/* eslint-disable no-unused-vars */
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import { isEmail } from 'validator';
-import { get } from 'lodash';
+import { useSelector, useDispatch } from 'react-redux';
+import PropTypes from 'prop-types';
 
 import { Container } from '../../styles/GlobalStyles';
 import { Form } from './styled';
-import axios from '../../services/axios';
-import history from '../../services/history';
 import Loading from '../../components/Loading';
+import * as actions from '../../store/modules/auth/actions';
 
-export default function Register() {
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+export default function Register(props) {
+  const dispatch = useDispatch();
+
+  const id = useSelector((state) => state.auth.user.id);
+  const nomeStored = useSelector((state) => state.auth.user.nome);
+  const emailStored = useSelector((state) => state.auth.user.email);
+  const isLoading = useSelector((state) => state.auth.isLoading);
+  const { history } = props;
+
+  const [formData, setFormData] = useState({
+    nome: id ? nomeStored : '',
+    email: id ? emailStored : '',
+    password: '',
+  });
 
   async function handleSubmit(e) {
     e.preventDefault();
 
-    let formErros = false;
+    let formErrors = false;
 
-    if (nome.length < 3 || nome.length > 255) {
-      formErros = true;
+    if (formData.nome.length < 3 || formData.nome.length > 255) {
+      formErrors = true;
       toast.error('Nome deve ter entre 3 e 255 caracteres');
     }
 
-    if (!isEmail(email)) {
-      formErros = true;
-      toast.error('Email invalido');
+    if (!isEmail(formData.email)) {
+      formErrors = true;
+      toast.error('E-mail inválido.');
     }
 
-    if (password.length < 6 || password.length > 50) {
-      formErros = true;
+    if (
+      !id &&
+      (formData.password.length < 6 || formData.password.length > 50)
+    ) {
+      formErrors = true;
       toast.error('Senha deve ter entre 6 e 50 caracteres');
     }
 
-    if (formErros) return;
+    if (formErrors) return;
 
-    setIsLoading(true);
-
-    try {
-      const response = await axios.post('/users/', { nome, password, email });
-      console.log(response);
-      toast.success('Cadastro concluído');
-      setIsLoading(false);
-
-      history.push('/');
-    } catch (err) {
-      const status = get(err, 'response.status', 0);
-      const errors = get(err, 'response.data.erros', []);
-      console.log('status', status, errors);
-      errors.map((error) => toast.error(error));
-      setIsLoading(false);
-    }
+    dispatch(
+      actions.registerRequest({
+        nome: formData.nome,
+        email: formData.email,
+        password: formData.password,
+        id,
+        history,
+      }),
+    );
   }
+
   return (
     <Container>
       <Loading isLoading={isLoading} />
-      <h1>Crie sua conta</h1>
+
+      <h1>{id ? 'Editar dados' : 'Crie sua conta'}</h1>
 
       <Form onSubmit={handleSubmit}>
         <label htmlFor="nome">
           Nome:
           <input
             type="text"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex.: Maria Jose"
+            value={formData.nome}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, nome: e.target.value }))
+            }
+            placeholder="Seu nome"
           />
         </label>
+
         <label htmlFor="email">
-          Email:
+          E-mail:
           <input
-            type="text"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Ex.: maria@gmail.com"
+            type="email"
+            value={formData.email}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, email: e.target.value }))
+            }
+            placeholder="Seu e-mail"
           />
         </label>
-        <label htmlFor="senha">
+
+        <label htmlFor="password">
           Senha:
           <input
-            type="text"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type="password"
+            value={formData.password}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, password: e.target.value }))
+            }
             placeholder="Sua senha"
           />
         </label>
 
-        <button type="submit">Criar minha conta</button>
+        <button type="submit">{id ? 'Salvar' : 'Criar conta'}</button>
       </Form>
     </Container>
   );
 }
+
+Register.propTypes = {
+  history: PropTypes.shape({}).isRequired,
+};
