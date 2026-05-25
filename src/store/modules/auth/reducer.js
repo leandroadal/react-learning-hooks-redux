@@ -25,6 +25,12 @@ export default function (state = initialState, action) {
       return newState;
     }
 
+    case types.LOGIN_REQUEST: {
+      const newState = { ...state };
+      newState.isLoading = true;
+      return newState;
+    }
+
     default: {
       return state;
     }
